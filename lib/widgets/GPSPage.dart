@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 
 class PlaceholderScreenGPS extends StatelessWidget {
-  const PlaceholderScreenGPS({super.key});
+  final AppBar appBar;
+
+  const PlaceholderScreenGPS({super.key, required this.appBar,});
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        'Ми ще цю функцію не додали',
-        style: Theme.of(context).textTheme.bodyMedium,
+    
+    return Scaffold(
+      appBar: appBar,
+      body: Center(
+        child: Text(
+          'We don\'t add this function',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
       ),
     );
   }

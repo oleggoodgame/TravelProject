@@ -40,3 +40,9 @@ class Interest {
 
   Interest({required this.selected, required this.price});
 }
+
+class User{
+  int id;
+  String name;
+  User({required this.id, required this.name});
+}

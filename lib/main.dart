@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:eight/widgets/TravelPage.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 var kColorScheme = ColorScheme.fromSeed(
   seedColor: const Color.fromARGB(255, 197, 15, 15),
@@ -26,7 +27,7 @@ void main() {
         ),
         
       ),
-      home: const TravelPage(),
+      home: ProviderScope(child: const TravelPage()),
     ),
   );
 }

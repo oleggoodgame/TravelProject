@@ -14,6 +14,7 @@ class TravelPage extends StatefulWidget {
 }
 
 class _TravelPageState extends State<TravelPage> {
+  User user = User(id: 1, name: "Oleg");
   Category _selectedCategory = Category.plane;
   var _activeScreen = 'buy-screen';
   double _globalBalance = 300.0;
@@ -163,45 +164,20 @@ class _TravelPageState extends State<TravelPage> {
         carTravels: _carTravels,
         trainTravels: _trainTravels,
         onTravelTap: _onTravelTap,
+        user: user,
+        appBar: appBar(),
+        onAddTravel: _onAddTravel,
       );
     } else if (_activeScreen == 'email-screen') {
       screenWidget = PurchasedTripsScreen(
         _onReturnTap,
         purchasedTrips: _purchasedTrips,
+        appBar: appBar(),
       );
     } else if (_activeScreen == 'gps-screen') {
-      screenWidget = PlaceholderScreenGPS();
+      screenWidget = PlaceholderScreenGPS(appBar: appBar());
     }
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.online_prediction_rounded),
-              onPressed: _switchScreenPurchased,
-            ),
-            IconButton(
-              icon: const Icon(Icons.map_outlined),
-              onPressed: _switchScreenGPS,
-            ),
-            IconButton(
-              icon: const Icon(Icons.email),
-              onPressed: _switchScreenMail,
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text("Balance:"),
-                Text("$_globalBalance\$"),
-              ], // З ЦИМ ПРОБЛЕМА, КОЛИ Я КУПЛЯЮ ВОНО ОНВЛЮЄТЬСЯ ЯКЩО Я ПЕРЕХОЖУ НА ІНШИЙ ЕКРАН, але повернення працює нормально
-            ),
-          ],
-        ),
-      ),
-
-      body: screenWidget,
-    ); //
+    return screenWidget;
   }
 
   void onCategoryChanged(Category category) {
@@ -210,133 +186,189 @@ class _TravelPageState extends State<TravelPage> {
     });
   }
 
-  void _onTravelTap(BuildContext context, Travel travel) {
-    double finalPrice = travel.price;
-    double totalExtras = 0.0;
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        // Копіюємо інтереси, щоб не псувати глобальні
-        final Map<String, Interest> localInterests = {
-          for (var entry in _getInterestsForCategory(travel.category).entries)
-            entry.key: Interest(
-              selected: entry.value.selected,
-              price: entry.value.price,
-            ),
-        };
-
-        return StatefulBuilder(
-          builder: (ctx, setState) {
-            return AlertDialog(
-              title: Text('Підтвердити покупку?'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Ви хочете купити "${travel.title}" за ${travel.price}\$?',
-                  ),
-                  const SizedBox(height: 12),
-                  ...localInterests.entries.map((entry) {
-                    return CheckboxListTile(
-                      title: Text('${entry.key} (+${entry.value.price}\$)'),
-                      value: entry.value.selected,
-                      onChanged: (newValue) {
-                        setState(() {
-                          localInterests[entry.key]!.selected = newValue!;
-                        });
-                      },
-                    );
-                  }),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Скасувати'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    for (var entry in localInterests.entries) {
-                      if (entry.value.selected) {
-                        totalExtras += entry.value.price;
-                      }
-                    }
-
-                    finalPrice += totalExtras;
-
-                    if (_globalBalance >= finalPrice) {
-                      Navigator.of(ctx).pop(); // закриваємо діалог
-                      _purchaseTravel(
-                        context,
-                        travel,
-                        totalExtras,
-                      ); // 🎯 сюди все пішло
-                    } else {
-                      Navigator.of(ctx).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Недостатньо коштів')),
-                      );
-                    }
-                  },
-                  child: const Text('Купити'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _onReturnTap(BuildContext context, Travel travel) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Підтвердити повернення?'),
-        content: Text(
-          'Вам повернуть "${travel.finalPrice}"\$ від поїздки "${travel.title}"',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(ctx).pop(); // закрити діалог
-            },
-            child: const Text('Скасувати'),
+  AppBar appBar() {
+    return AppBar(
+      title: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.online_prediction_rounded),
+            onPressed: _switchScreenPurchased,
           ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _globalBalance += travel.finalPrice;
-                _purchasedTrips.remove(travel);
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Повернено "${travel.title}". Баланс: $_globalBalance',
-                  ),
-                ),
-              );
-              travel.finalPrice = travel.price;
-              if (travel.category == Category.plane) {
-                setState(() {
-                  _planeTravels.add(travel);
-                });
-              } else if (travel.category == Category.car) {
-                setState(() {
-                  _carTravels.add(travel);
-                });
-              } else {
-                setState(() {
-                  _trainTravels.add(travel);
-                });
-              }
-              Navigator.of(ctx).pop(); // закрити діалог
-            },
-            child: const Text('Повернути'),
+          IconButton(
+            icon: const Icon(Icons.map_outlined),
+            onPressed: _switchScreenGPS,
+          ),
+          IconButton(
+            icon: const Icon(Icons.email),
+            onPressed: _switchScreenMail,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text("Balance:"),
+              Text("$_globalBalance\$"),
+            ], // З ЦИМ ПРОБЛЕМА, КОЛИ Я КУПЛЯЮ ВОНО ОНВЛЮЄТЬСЯ ЯКЩО Я ПЕРЕХОЖУ НА ІНШИЙ ЕКРАН, але повернення працює нормально
           ),
         ],
       ),
     );
+  }
+
+  void _onTravelTap(BuildContext context, Travel travel) {
+    if (travel.company != user.name) {
+      double finalPrice = travel.price;
+      double totalExtras = 0.0;
+      showDialog(
+        context: context,
+        builder: (ctx) {
+          final Map<String, Interest> localInterests = {
+            for (var entry in _getInterestsForCategory(travel.category).entries)
+              entry.key: Interest(
+                selected: entry.value.selected,
+                price: entry.value.price,
+              ),
+          };
+
+          return StatefulBuilder(
+            builder: (ctx, setState) {
+              return AlertDialog(
+                title: Text('Confirm purchase?'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Do you want to buy "${travel.title}" for ${travel.price}\$?',
+                    ),
+                    const SizedBox(height: 12),
+                    ...localInterests.entries.map((entry) {
+                      return CheckboxListTile(
+                        title: Text('${entry.key} (+${entry.value.price}\$)'),
+                        value: entry.value.selected,
+                        onChanged: (newValue) {
+                          setState(() {
+                            localInterests[entry.key]!.selected = newValue!;
+                          });
+                        },
+                      );
+                    }),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      for (var entry in localInterests.entries) {
+                        if (entry.value.selected) {
+                          totalExtras += entry.value.price;
+                        }
+                      }
+
+                      finalPrice += totalExtras;
+
+                      if (_globalBalance >= finalPrice) {
+                        Navigator.of(ctx).pop();
+                        _purchaseTravel(context, travel, totalExtras);
+                      } else {
+                        Navigator.of(ctx).pop();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Insufficient funds')),
+                        );
+                      }
+                    },
+                    child: const Text('Buy'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Not available'),
+          content: const Text('You cannot buy your own trip.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Ок'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  void _onReturnTap(BuildContext context, Travel travel) {
+    if (travel.company != user.name) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('Confirm return?'),
+          content: Text(
+            'You will be refunded "${travel.finalPrice}"\$ from the trip "${travel.title}"',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop(); // закрити діалог
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _globalBalance += travel.finalPrice;
+                  _purchasedTrips.remove(travel);
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Returned "${travel.title}". Balance: $_globalBalance',
+                    ),
+                  ),
+                );
+                travel.finalPrice = travel.price;
+                if (travel.category == Category.plane) {
+                  setState(() {
+                    _planeTravels.add(travel);
+                  });
+                } else if (travel.category == Category.car) {
+                  setState(() {
+                    _carTravels.add(travel);
+                  });
+                } else {
+                  setState(() {
+                    _trainTravels.add(travel);
+                  });
+                }
+                Navigator.of(ctx).pop(); // закрити діалог
+              },
+              child: const Text('Return'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Not available'),
+          content: const Text('You cannot refund your own trip.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Ок'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   void _purchaseTravel(
@@ -358,12 +390,30 @@ class _TravelPageState extends State<TravelPage> {
         _trainTravels.remove(travel);
       }
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Куплено "${travel.title}". Баланс: $_globalBalance\$'),
+        content: Text('Bought "${travel.title}". Balance: $_globalBalance\$'),
       ),
     );
+  }
+
+  void _onAddTravel(Travel travel) {
+    setState(() {
+      if (travel.category == Category.plane) {
+        _planeTravels.add(travel);
+      } else if (travel.category == Category.car) {
+        _carTravels.add(travel);
+      } else {
+        _trainTravels.add(travel);
+      }
+      _purchasedTrips.add(travel);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Added "${travel.title}". Balance: $_globalBalance\$'),
+        ),
+      );
+    });
   }
 
   Map<String, Interest> _getInterestsForCategory(Category category) {
